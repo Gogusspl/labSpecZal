@@ -1,0 +1,94 @@
+<header class="navbar">
+  <div class="logo">
+    <img src="assets/Logo.png" alt="CodelAI Logo" />
+  </div>
+
+  <nav class="nav-links">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Home</a>
+    <a routerLink="/forum" routerLinkActive="active">Forum</a>
+    <a routerLink="/interview" routerLinkActive="active">Interview questions</a>
+    <a routerLink="/aiBot" routerLinkActive="active">Learn with AI</a>
+    <a routerLink="/roadmap" routerLinkActive="active">Roadmap</a>
+  </nav>
+
+  <div class="nav-right">
+    @if (!username) {
+      <a class="login" (click)="openLogin()">Login</a>
+    } @else {
+      <div class="user-menu" #userMenu style="position:relative;">
+        <button class="user-menu-button" (click)="toggleUserMenu()">
+          {{ username }} ▾
+        </button>
+
+        @if (showUserMenu) {
+          <div class="user-dropdown">
+            <button class="dropdown-item" (click)="logout()">Logout</button>
+          </div>
+        }
+      </div>
+    }
+    <button class="dropbtn" (click)="toggleSidebar()">☰</button>
+  </div>
+</header>
+
+
+@if (showSidebar) {
+  <div class="sidebar-overlay" (click)="toggleSidebar()"></div>
+  <div class="sidebar show">
+    <span class="close-btn" (click)="toggleSidebar()">×</span>
+    <img src="assets/Logo.png" alt="CodelAI Logo" class="sidebar-logo" />
+    <div class="sidebar-socials">
+      <a href="https://facebook.com" target="_blank"><i class="fab fa-facebook-f"></i></a>
+      <a href="https://instagram.com" target="_blank"><i class="fab fa-instagram"></i></a>
+      <a href="https://youtube.com" target="_blank"><i class="fab fa-youtube"></i></a>
+      <a href="https://tiktok.com" target="_blank"><i class="fab fa-tiktok"></i></a>
+      <a href="https://linkedin.com" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+    </div>
+    <ul>
+      <li><a routerLink="/notifications">Notifications</a></li>
+      <li><a routerLink="/settings">Settings</a></li>
+      <li><a routerLink="/premium">Get Premium</a></li>
+      <li><a routerLink="/contact">Contact Us</a></li>
+    </ul>
+  </div>
+}
+
+@if (showLogin) {
+  <div class="modal-overlay">
+    <div class="modal">
+      <span class="close-btn" (click)="closeLogin()">×</span>
+      <img class="modal-logo" src="assets/Logo.png" alt="CodelAI Logo" />
+
+      <form (ngSubmit)="onSubmit()" #authForm="ngForm">
+        <input type="email" placeholder="Email" [(ngModel)]="email" name="email" required />
+
+        @if (isRegister) {
+          <input type="text" placeholder="Username" [(ngModel)]="usernameInput" name="username" required />
+        }
+
+        <input type="password" placeholder="Password" [(ngModel)]="password" name="password" required />
+
+        @if (isRegister) {
+          <input type="password" placeholder="Confirm Password" [(ngModel)]="confirmPassword" name="confirmPassword" required />
+          <select [(ngModel)]="country" name="country" required>
+            <option value="" disabled selected>Select your country</option>
+            <option value="PL">Poland</option>
+            <option value="DE">Germany</option>
+            <option value="UK">United Kingdom</option>
+            <option value="US">United States</option>
+            <option value="FR">France</option>
+            <option value="ES">Spain</option>
+            <option value="IT">Italy</option>
+          </select>
+        }
+
+        <button type="submit">{{ isRegister ? 'Register' : 'Login' }}</button>
+      </form>
+
+      <p class="switch-text">
+        {{ isRegister ? 'Already have an account?' : "Don't have an account?" }}
+        <a (click)="toggleRegister()">{{ isRegister ? 'Login' : 'Register' }}</a>
+      </p>
+    </div>
+  </div>
+}
