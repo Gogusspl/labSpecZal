@@ -1,1 +1,158 @@
-<p>forum works!</p>
+<app-shared-model></app-shared-model>
+
+<main class="forum-layout" [ngClass]="{ 'post-detail-view': route.children.length > 0 }">
+
+  <section class="forum-posts">
+    <div class="forum-topbar" *ngIf="route.children.length === 0">
+      <div class="search-container">
+        <input type="text" placeholder="Search..." class="search-input" />
+      </div>
+      <button class="new-post-btn" (click)="openNewPost()">+ New Post</button>
+    </div>
+
+    @if (route.children.length === 0) {
+      @for (post of posts(); track post.id) {
+        <div class="post-card" [routerLink]="['/forum/post', post.id]">
+          <div class="post-header">
+            <div class="post-left">
+              <div class="post-category">
+                <span class="post-category-text language-pill">
+                  <span class="flag" [ngClass]="languageFlags[post.language ?? '']"></span>
+                </span>
+              </div>
+              @if (post.tags && post.tags.length > 0) {
+                <div class="post-tags-inline">
+                  @for (tag of post.tags; track tag) {
+                    <span class="tag" [ngClass]="tag">{{ tag }}</span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <h3 class="post-title">{{ post.title }}</h3>
+          <p class="post-meta">
+            Posted by: <span class="author-name">{{ post.author }}</span> •
+            {{ timeAgo(post.createdAt) }}
+          </p>
+
+          <div class="post-stats">
+            <div class="stats-item">
+              <i class="fas fa-comment"></i>
+              <span>{{ post.replies }} Replies</span>
+            </div>
+            <div class="stats-item">
+              <i class="fas fa-eye"></i>
+              <span>{{ post.views }} Views</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="pagination">
+        <button (click)="changePage(currentPage - 1)" [disabled]="currentPage === 0">«</button>
+
+        @for (p of getVisiblePages(); track p) {
+          @if (p === 'dots') {
+            <span class="dots">...</span>
+          } @else {
+            <button (click)="changePage(p)" [class.active]="p === currentPage">
+              {{ p + 1 }}
+            </button>
+          }
+        }
+
+        <button (click)="changePage(currentPage + 1)" [disabled]="currentPage >= totalPages - 1">»</button>
+      </div>
+    }
+  </section>
+
+  <aside class="forum-sidebar">
+    @if (route.children.length > 0) {
+      <router-outlet></router-outlet>
+    } @else {
+      <div class="sidebar-box trending-topics">
+        <h4>Trending Topics</h4>
+        <ul>
+          @for (topic of trending(); track topic.id) {
+            <li class="trending-item" [routerLink]="['/forum/post', topic.id]">
+              <div class="topic-content">
+                <span>{{ topic.title }}</span>
+              </div>
+              <span class="topic-replies">{{ topic.replies }} replies</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </aside>
+</main>
+
+@if (showNewPost) {
+  <div class="modal-overlay">
+    <div class="modal new-post-modal">
+      <span class="close-btn" (click)="closeNewPost()">×</span>
+      <h2>New Post</h2>
+
+      <form class="new-post-form" (ngSubmit)="submitPost()" #newPostForm="ngForm">
+        <input type="text" placeholder="Title" [(ngModel)]="newPost.title" name="title" required />
+
+        <select [(ngModel)]="newPost.language" name="language" required>
+          <option value="" disabled selected>Select language</option>
+          <option value="PL">Polish</option>
+          <option value="DE">German</option>
+          <option value="UK">English (UK)</option>
+          <option value="US">English (US)</option>
+          <option value="FR">French</option>
+          <option value="ES">Spanish</option>
+          <option value="IT">Italian</option>
+        </select>
+
+        <textarea placeholder="Content" [(ngModel)]="newPost.text" name="text" required></textarea>
+
+        <select [(ngModel)]="newPost.codeLanguage" name="codeLanguage">
+          <option value="" selected>No code language</option>
+          <option value="java">Java</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="python">Python</option>
+          <option value="csharp">C#</option>
+          <option value="cpp">C++</option>
+          <option value="php">PHP</option>
+          <option value="sql">SQL</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+        </select>
+
+        <textarea placeholder="Code (optional)"
+                  [(ngModel)]="newPost.code"
+                  name="code"
+                  [disabled]="!newPost.codeLanguage"></textarea>
+
+        <div class="tags-container">
+          <input type="text" placeholder="Tags"
+                 [(ngModel)]="tagInput"
+                 name="tags"
+                 (input)="onTagInputChange()"
+                 (keydown)="addTagFromInput($event)" />
+        </div>
+
+        @if (tagSuggestions.length > 0) {
+          <div class="tag-suggestions">
+            @for (s of tagSuggestions; track s) {
+              <span [ngClass]="s" (click)="selectSuggestion(s)">{{ s }}</span>
+            }
+          </div>
+        }
+
+        <div class="selected-tags">
+          @for (t of newPost.tags; track t) {
+            <span class="tag" [ngClass]="t" (click)="removeTag(t)">{{ t }} ×</span>
+          }
+        </div>
+
+        <button type="submit" class="submit-btn">Post</button>
+      </form>
+    </div>
+  </div>
+}

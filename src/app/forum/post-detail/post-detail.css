@@ -1,0 +1,169 @@
+.post-detail-card {
+  width: 100%;
+  max-width: 1100px;
+  margin: 10px auto;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 50px 60px;
+  position: relative;
+  min-height: 500px;
+}
+
+/* --- Nagłówek i meta --- */
+.post-detail-header {
+  margin-bottom: 20px;
+}
+
+.post-meta-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.post-tags-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.post-tags-header .tag {
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+  color: #fff;
+}
+
+
+.post-detail-title {
+  font-size: 34px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 10px 0;
+  overflow-wrap: break-word;
+}
+
+.post-detail-meta {
+  font-size: 16px;
+  color: #777;
+}
+
+.post-detail-meta .author {
+  font-weight: 600;
+  color: #ff6600;
+}
+
+/* --- Unikalne style tagów --- */
+.tag.Java { background: #f89820; }
+.tag.JavaScript { background: #c1b117;}
+.tag.Python { background: #3572A5; }
+.tag.Angular { background: #dd0031; }
+.tag.CSS { background: #264de4; }
+.tag.HTML { background: #e34c26; }
+.tag.SQL { background: #00618a; }
+.tag.TypeScript { background: #3178c6; }
+.tag.RxJS { background: #b7178c; }
+
+/* --- Treść --- */
+.post-detail-content {
+  line-height: 1.8;
+  color: #555;
+  font-size: 18px;
+}
+
+.post-text {
+  margin-bottom: 25px;
+  overflow-wrap: break-word;
+}
+
+/* --- REWOLUCYJNY BLOK KODU --- */
+.code-block-container {
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.code-block-header {
+  background-color: #282a36; /* Kolor tła nagłówka */
+  color: #f8f8f2;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Fira Code', 'Roboto Mono', monospace; /* Fira Code dla czytelności */
+  font-size: 14px;
+}
+
+.code-language {
+  font-weight: 600;
+  color: #bd93f9;
+}
+
+.copy-code-btn {
+  background: none;
+  border: none;
+  color: #f8f8f2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.copy-code-btn:hover {
+  color: #50fa7b;
+}
+
+pre {
+  margin: 0;
+  background-color: #282a36; /* Kolor tła dla kodu */
+  padding: 20px;
+  font-family: 'Fira Code', 'Roboto Mono', monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: auto;
+  border-radius: 0 0 12px 12px;
+}
+
+code {
+  color: #f8f8f2;
+}
+
+
+.post-detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.post-stats {
+  font-size: 14px;
+  color: #777;
+}
+
+.back-btn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 8px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #ff6600;
+  color: #fff;
+  border-color: #ff6600;
+}

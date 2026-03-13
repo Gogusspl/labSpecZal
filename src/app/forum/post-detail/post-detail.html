@@ -1,10 +1,50 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+<main class="post-detail">
+  <button class="back-btn" (click)="goBack()">
+    <i class="fas fa-arrow-left"></i> Wróć
+  </button>
+
+  @if (post()) {
+    <article class="post-detail-card">
+      <header class="post-detail-header">
+        <h2 class="post-detail-title">{{ post()?.title }}</h2>
+        <div class="post-meta-container">
+          <div class="post-tags-header">
+            @if (post()?.tags?.length) {
+              @for (tag of post()?.tags; track tag) {
+                <span class="tag" [ngClass]="tag">{{ tag }}</span>
+              }
+            }
+          </div>
+          <p class="post-detail-meta">
+            Opublikowane przez <span class="author">{{ post()?.author }}</span> • {{ formattedDate() }}
+          </p>
+        </div>
+      </header>
+
+      <section class="post-detail-content">
+        <p class="post-text">{{ post()?.text }}</p>
+
+        @if (post()?.code) {
+          <div class="code-block-container">
+            <header class="code-block-header">
+              <span class="code-language">{{ post()?.codeLanguage }} Code</span>
+              <button class="copy-code-btn">
+                <i class="fas fa-copy"></i> Kopiuj
+              </button>
+            </header>
+            <pre><code #codeElement [attr.data-language]="post()?.codeLanguage">{{ post()?.code }}</code></pre>
+          </div>
+        }
+      </section>
+
+      <footer class="post-detail-footer">
+        <div class="post-stats">
+          <span>{{ post()?.replies }} Odpowiedzi</span> •
+          <span>{{ post()?.views }} Wyświetleń</span>
+        </div>
+      </footer>
+    </article>
+  } @else {
+    <div class="loading">Ładowanie posta...</div>
+  }
+</main>
