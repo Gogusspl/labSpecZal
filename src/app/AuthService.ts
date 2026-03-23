@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { tap, switchMap, catchError } from 'rxjs/operators';
 
 @Injectable({
@@ -8,25 +8,34 @@ import { tap, switchMap, catchError } from 'rxjs/operators';
 })
 export class AuthService {
   private apiUrl = 'http://localhost:8080/api/auth';
-  private currentUserSubject = new BehaviorSubject<string | null>(localStorage.getItem('username'));
-  public currentUser$ = this.currentUserSubject.asObservable();
+
+  private currentUserSubject = new BehaviorSubject<string | null>(
+    localStorage.getItem('username')
+  );  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) {
-    this.initAuth();
+    this.autoLogin();
   }
 
-  private initAuth(): void {
+  autoLogin(): void {
     const token = this.getToken();
-    if (token) {
-      this.fetchUser().subscribe({
-        error: () => {
-          this.refreshAccessToken().subscribe({
-            next: () => this.fetchUser().subscribe(),
-            error: () => this.logout()
-          });
-        }
-      });
-    }
+    if (!token) return;
+
+    this.fetchUser().subscribe({
+      next: () => {},
+      error: () => {
+        console.log("fetchUser failed, trying refresh...");
+
+        this.refreshAccessToken().subscribe({
+          next: () => {
+            this.fetchUser().subscribe();
+          },
+          error: (err) => {
+            console.log("REFRESH FAILED", err);
+          }
+        });
+      }
+    });
   }
 
   register(username: string, email: string, password: string, country: string): Observable<any> {
@@ -38,7 +47,9 @@ export class AuthService {
       tap(res => {
         if (res?.accessToken) {
           localStorage.setItem('token', res.accessToken);
-          if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken);
+          if (res.refreshToken) {
+            localStorage.setItem('refreshToken', res.refreshToken);
+          }
         }
       }),
       switchMap(() => this.fetchUser()),
@@ -47,7 +58,13 @@ export class AuthService {
   }
 
   fetchUser(): Observable<any> {
-    return this.http.get<any>('http://localhost:8080/api/users/me').pipe(
+    const token = this.getToken();
+
+    return this.http.get<any>('http://localhost:8080/api/users/me', {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }).pipe(
       tap(user => {
         if (user?.username) {
           localStorage.setItem('username', user.username);
@@ -59,7 +76,7 @@ export class AuthService {
 
   refreshAccessToken(): Observable<any> {
     const refreshToken = this.getRefreshToken();
-    if (!refreshToken) return throwError(() => 'No refresh token available');
+    if (!refreshToken) return throwError(() => 'No refresh token');
 
     return this.http.post<any>(`${this.apiUrl}/refresh`, { refreshToken }).pipe(
       tap(res => {
@@ -81,7 +98,15 @@ export class AuthService {
     this.currentUserSubject.next(null);
   }
 
-  getToken(): string | null { return localStorage.getItem('token'); }
-  getRefreshToken(): string | null { return localStorage.getItem('refreshToken'); }
-  isLoggedIn(): boolean { return !!this.getToken(); }
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
+  isLoggedIn(): boolean {
+    return !!this.getToken();
+  }
 }
