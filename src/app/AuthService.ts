@@ -11,7 +11,8 @@ export class AuthService {
 
   private currentUserSubject = new BehaviorSubject<string | null>(
     localStorage.getItem('username')
-  );  public currentUser$ = this.currentUserSubject.asObservable();
+  );
+  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(private http: HttpClient) {
     this.autoLogin();
@@ -24,14 +25,12 @@ export class AuthService {
     this.fetchUser().subscribe({
       next: () => {},
       error: () => {
-        console.log("fetchUser failed, trying refresh...");
-
         this.refreshAccessToken().subscribe({
           next: () => {
             this.fetchUser().subscribe();
           },
           error: (err) => {
-            console.log("REFRESH FAILED", err);
+            console.error("Auto-login refresh failed", err);
           }
         });
       }
@@ -46,7 +45,8 @@ export class AuthService {
     return this.http.post<any>(`${this.apiUrl}/login`, { email, password }).pipe(
       tap(res => {
         if (res?.accessToken) {
-          localStorage.setItem('token', res.accessToken);
+          this.clearAllTokens();
+          localStorage.setItem('accessToken', res.accessToken);
           if (res.refreshToken) {
             localStorage.setItem('refreshToken', res.refreshToken);
           }
@@ -58,13 +58,7 @@ export class AuthService {
   }
 
   fetchUser(): Observable<any> {
-    const token = this.getToken();
-
-    return this.http.get<any>('http://localhost:8080/api/users/me', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }).pipe(
+    return this.http.get<any>('http://localhost:8080/api/users/me').pipe(
       tap(user => {
         if (user?.username) {
           localStorage.setItem('username', user.username);
@@ -81,7 +75,7 @@ export class AuthService {
     return this.http.post<any>(`${this.apiUrl}/refresh`, { refreshToken }).pipe(
       tap(res => {
         if (res?.accessToken) {
-          localStorage.setItem('token', res.accessToken);
+          localStorage.setItem('accessToken', res.accessToken);
         }
       }),
       catchError(err => {
@@ -92,14 +86,18 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('username');
+    this.clearAllTokens();
     this.currentUserSubject.next(null);
   }
 
+  private clearAllTokens(): void {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('username');
+  }
+
   getToken(): string | null {
-    return localStorage.getItem('token');
+    return localStorage.getItem('accessToken');
   }
 
   getRefreshToken(): string | null {

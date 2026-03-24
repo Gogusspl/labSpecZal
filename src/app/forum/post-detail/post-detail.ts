@@ -9,14 +9,15 @@ import {
   QueryList,
   Optional,
   signal,
-  effect,
-  ChangeDetectorRef
+  effect
 } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
+
 import hljs from 'highlight.js/lib/core';
 import typescript from 'highlight.js/lib/languages/typescript';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -25,8 +26,10 @@ import python from 'highlight.js/lib/languages/python';
 import css from 'highlight.js/lib/languages/css';
 import sql from 'highlight.js/lib/languages/sql';
 import csharp from 'highlight.js/lib/languages/csharp';
+
 import { AuthService } from '../../AuthService';
 import { SharedModel } from '../../shared-model/shared-model';
+import { WebSocketService } from '../../websocket.service';
 
 hljs.registerLanguage('typescript', typescript);
 hljs.registerLanguage('javascript', javascript);
@@ -41,7 +44,6 @@ interface Post {
   title: string;
   text: string;
   code?: string;
-  language?: string;
   codeLanguage?: string;
   author?: string;
   createdAt?: string;
@@ -69,12 +71,12 @@ interface Comment {
   encapsulation: ViewEncapsulation.None
 })
 export class PostDetailComponent implements OnInit, OnDestroy {
+
   @ViewChild('codeElement') codeElement!: ElementRef;
   @ViewChildren('commentCode') commentCodes!: QueryList<ElementRef>;
 
   post = signal<Post | undefined>(undefined);
   formattedDate = signal<string>('');
-
   comments = signal<Comment[]>([]);
   showCodeInput = signal(false);
 
@@ -92,81 +94,101 @@ export class PostDetailComponent implements OnInit, OnDestroy {
   private readonly COMMENTS_API = 'http://localhost:8080/api/comments';
 
   private userSub?: Subscription;
+  private postId!: number;
 
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
     private router: Router,
-    private cdr: ChangeDetectorRef,
     private authService: AuthService,
+    private wsService: WebSocketService,
     @Optional() private sharedModel?: SharedModel
   ) {
 
-    // 🔥 highlight post code
+    // 🔥 highlight POST
     effect(() => {
       const currentPost = this.post();
+
       if (currentPost?.code) {
         setTimeout(() => {
           if (this.codeElement) {
             hljs.highlightElement(this.codeElement.nativeElement);
-            this.cdr.detectChanges();
           }
-        }, 0);
+        });
       }
     });
 
-    // 🔥 highlight komentarzy
+    // 🔥 highlight COMMENTS
     effect(() => {
       this.comments();
+
       setTimeout(() => {
         this.commentCodes?.forEach(el => {
           hljs.highlightElement(el.nativeElement);
         });
-        this.cdr.detectChanges();
-      }, 0);
+      });
     });
 
+    // 🔥 USER
     this.userSub = this.authService.currentUser$.subscribe(user => {
       this.username = user;
-      this.cdr.detectChanges();
     });
   }
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
+    if (!id) return;
 
-    if (id) {
-      const postId = +id;
+    this.postId = +id;
 
-      // 🔹 POST
-      this.http.get<Post>(`${this.API}/${postId}`).subscribe({
-        next: p => {
-          this.post.set(p);
+    // 🔹 LOAD POST
+    this.loadPost();
 
-          if (p.createdAt) {
-            this.formattedDate.set(this.timeAgo(p.createdAt));
-          }
+    // 🔹 LOAD COMMENTS
+    this.loadComments();
 
-          this.newComment.update(c => ({
-            ...c,
-            postId: p.id
-          }));
-        },
-        error: err => console.error(err)
-      });
+    // 🔥 WEBSOCKET
+    this.wsService.subscribeToComments(this.postId, (newComment: Comment) => {
 
-      // 🔹 COMMENTS
-      this.loadComments(postId);
-    }
+      const exists = this.comments().some(c => c.id === newComment.id);
+      if (exists) return;
+
+      this.comments.set([
+        newComment,
+        ...this.comments()
+      ]);
+    });
   }
 
   ngOnDestroy(): void {
     this.userSub?.unsubscribe();
+
+    // 🔥 bardzo ważne
+    this.wsService.unsubscribeAll();
   }
 
-  // 🔥 LOAD COMMENTS Z BACKENDU
-  loadComments(postId: number) {
-    this.http.get<Comment[]>(`${this.COMMENTS_API}/${postId}`)
+  // 🔥 LOAD POST
+  loadPost() {
+    this.http.get<Post>(`${this.API}/${this.postId}`).subscribe({
+      next: p => {
+        this.post.set(p);
+
+        if (p.createdAt) {
+          this.formattedDate.set(this.timeAgo(p.createdAt));
+        }
+
+        this.newComment.update(c => ({
+          ...c,
+          postId: p.id
+        }));
+      },
+      error: err => console.error(err)
+    });
+  }
+
+  // 🔥 LOAD COMMENTS
+  loadComments() {
+    this.http.get<Comment[]>(`${this.COMMENTS_API}/${this.postId}`)
       .subscribe({
         next: data => this.comments.set(data),
         error: err => console.error(err)
@@ -190,7 +212,7 @@ export class PostDetailComponent implements OnInit, OnDestroy {
     this.showCodeInput.update(v => !v);
   }
 
-  // 🔥 ADD COMMENT -> BACKEND
+  // 🔥 ADD COMMENT
   addComment() {
     if (!this.username) {
       this.sharedModel?.openLogin();
@@ -199,9 +221,7 @@ export class PostDetailComponent implements OnInit, OnDestroy {
 
     const comment = this.newComment();
 
-    if (!comment.text?.trim() && !comment.code?.trim()) {
-      return;
-    }
+    if (!comment.text?.trim() && !comment.code?.trim()) return;
 
     const payload = {
       postId: this.post()?.id,
@@ -213,10 +233,7 @@ export class PostDetailComponent implements OnInit, OnDestroy {
     this.http.post<Comment>(this.COMMENTS_API, payload)
       .subscribe({
         next: saved => {
-          // 🔥 dodajemy na górę listy
-          this.comments.set([saved, ...this.comments()]);
 
-          // 🔥 reset formularza
           this.newComment.set({
             postId: this.post()?.id ?? 0,
             author: '',
@@ -237,6 +254,7 @@ export class PostDetailComponent implements OnInit, OnDestroy {
 
   timeAgo(dateStr?: string): string {
     if (!dateStr) return '';
+
     const then = new Date(dateStr).getTime();
     const now = Date.now();
     const diff = Math.floor((now - then) / 1000);
@@ -244,6 +262,7 @@ export class PostDetailComponent implements OnInit, OnDestroy {
     if (diff < 60) return `${diff}s`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+
     return `${Math.floor(diff / 86400)}d`;
   }
 }

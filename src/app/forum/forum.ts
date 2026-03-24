@@ -6,6 +6,7 @@ import { SharedModel } from '../shared-model/shared-model';
 import { AuthService } from '../AuthService';
 import { Subscription } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { WebSocketService } from '../websocket.service';
 
 interface Post {
   id?: number;
@@ -43,6 +44,7 @@ interface PostPage {
   styleUrls: ['./forum.css']
 })
 export class Forum implements OnDestroy {
+
   private readonly API = 'http://localhost:8080/api/posts';
 
   posts = signal<Post[]>([]);
@@ -86,7 +88,8 @@ export class Forum implements OnDestroy {
     private el: ElementRef,
     private authService: AuthService,
     public route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private wsService: WebSocketService
   ) {
     this.loadPosts();
     this.userSub = this.authService.currentUser$.subscribe((user: string | null) => {
@@ -96,6 +99,7 @@ export class Forum implements OnDestroy {
 
   ngOnDestroy() {
     this.userSub?.unsubscribe();
+    this.wsService.unsubscribeAll(); // 🔥 jedyna dodana linia
   }
 
   loadPosts(page: number = 0) {
@@ -105,6 +109,7 @@ export class Forum implements OnDestroy {
 
     this.http.get<PostPage>(this.API, { params }).subscribe({
       next: pageData => {
+
         this.posts.set(pageData.content);
         this.currentPage = pageData.number;
         this.totalPages = pageData.totalPages;
@@ -112,7 +117,46 @@ export class Forum implements OnDestroy {
         const trend = [...pageData.content]
           .sort((a, b) => (b.replies ?? 0) - (a.replies ?? 0))
           .slice(0, 5);
+
         this.trending.set(trend);
+
+        // 🔥 SUBSKRYPCJE WS
+        pageData.content.forEach(post => {
+
+          if (!post.id) return;
+
+          // 🔥 JEDYNA ZMIANA → type: string
+          this.wsService.subscribeToPostUpdates(post.id, (type: string) => {
+
+            const updated = this.posts().map(p => {
+              if (p.id === post.id) {
+
+                // 🔥 NOWE
+                if (type === 'NEW_COMMENT') {
+                  return {
+                    ...p,
+                    replies: (p.replies ?? 0) + 1
+                  };
+                }
+
+                // 🔥 NOWE
+                if (type === 'VIEW') {
+                  return {
+                    ...p,
+                    views: (p.views ?? 0) + 1
+                  };
+                }
+
+              }
+              return p;
+            });
+
+            this.posts.set(updated);
+
+          });
+
+        });
+
       },
       error: err => console.error('Błąd pobierania postów', err)
     });
