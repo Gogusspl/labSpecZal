@@ -69,7 +69,23 @@ export class WebSocketService {
       this.pendingSubscriptions.push(subscribeFn);
     }
   }
+  subscribeToNewPosts(onMessage: (post: any) => void) {
+    this.ensureConnection();
 
+    const subscribeFn = () => {
+      const sub = this.client.subscribe(`/topic/posts`, msg => {
+        onMessage(JSON.parse(msg.body));
+      });
+
+      this.subscriptions.push(sub);
+    };
+
+    if (this.connected) {
+      subscribeFn();
+    } else {
+      this.pendingSubscriptions.push(subscribeFn);
+    }
+  }
   unsubscribeAll() {
     this.subscriptions.forEach(s => s.unsubscribe());
     this.subscriptions = [];

@@ -92,17 +92,32 @@ export class Forum implements OnDestroy {
     private wsService: WebSocketService
   ) {
     this.loadPosts();
+
+    // 🔥 USER
     this.userSub = this.authService.currentUser$.subscribe((user: string | null) => {
       this.username = user;
+    });
+
+    // 🔥 GLOBAL NEW POSTS
+    this.wsService.subscribeToNewPosts((post: Post) => {
+
+      const exists = this.posts().some(p => p.id === post.id);
+      if (exists) return;
+
+      this.posts.set([post, ...this.posts()]);
     });
   }
 
   ngOnDestroy() {
     this.userSub?.unsubscribe();
-    this.wsService.unsubscribeAll(); // 🔥 jedyna dodana linia
+    this.wsService.unsubscribeAll();
   }
 
   loadPosts(page: number = 0) {
+
+    // 🔥 WAŻNE → czyścimy stare suby
+    this.wsService.unsubscribeAll();
+
     const params = new HttpParams()
       .set('page', page)
       .set('size', this.pageSize);
@@ -120,38 +135,27 @@ export class Forum implements OnDestroy {
 
         this.trending.set(trend);
 
-        // 🔥 SUBSKRYPCJE WS
+        // 🔥 SUBSKRYPCJE PER POST
         pageData.content.forEach(post => {
 
           if (!post.id) return;
 
-          // 🔥 JEDYNA ZMIANA → type: string
           this.wsService.subscribeToPostUpdates(post.id, (type: string) => {
 
-            const updated = this.posts().map(p => {
-              if (p.id === post.id) {
+            // 🔥 zamiast zgadywania → pobieramy aktualny stan
+            if (type === 'VIEW' || type === 'NEW_COMMENT') {
 
-                // 🔥 NOWE
-                if (type === 'NEW_COMMENT') {
-                  return {
-                    ...p,
-                    replies: (p.replies ?? 0) + 1
-                  };
-                }
+              this.http.get<Post>(`${this.API}/${post.id}`).subscribe(updatedPost => {
 
-                // 🔥 NOWE
-                if (type === 'VIEW') {
-                  return {
-                    ...p,
-                    views: (p.views ?? 0) + 1
-                  };
-                }
+                this.posts.set(
+                  this.posts().map(p =>
+                    p.id === updatedPost.id ? updatedPost : p
+                  )
+                );
 
-              }
-              return p;
-            });
+              });
 
-            this.posts.set(updated);
+            }
 
           });
 
@@ -175,17 +179,32 @@ export class Forum implements OnDestroy {
   getVisiblePages(): (number | 'dots')[] {
     const total = this.totalPages;
     const current = this.currentPage;
+
     if (total <= 6) return Array.from({ length: total }, (_, i) => i);
+
     const pages: (number | 'dots')[] = [];
+
     pages.push(0);
+
     let start = Math.max(1, current - 2);
     let end = Math.min(total - 2, current + 2);
-    if (current <= 3) { start = 1; end = 4; }
-    else if (current >= total - 4) { start = total - 5; end = total - 2; }
+
+    if (current <= 3) {
+      start = 1;
+      end = 4;
+    } else if (current >= total - 4) {
+      start = total - 5;
+      end = total - 2;
+    }
+
     if (start > 1) pages.push('dots');
+
     for (let i = start; i <= end; i++) pages.push(i);
+
     if (end < total - 2) pages.push('dots');
+
     pages.push(total - 1);
+
     return pages;
   }
 
@@ -203,12 +222,16 @@ export class Forum implements OnDestroy {
 
   submitPost() {
     if (!this.username) return;
+
     if (!this.newPost.title?.trim() || !this.newPost.text?.trim() || !this.newPost.language) return;
+
     if (this.newPost.code?.trim() && !this.newPost.codeLanguage) {
       alert('Please select a code language before adding code.');
       return;
     }
+
     this.newPost.author = this.username;
+
     this.http.post<Post>(this.API, this.newPost).subscribe({
       next: () => {
         this.resetNewPost();
@@ -227,27 +250,38 @@ export class Forum implements OnDestroy {
 
   onTagInputChange() {
     const q = this.tagInput.trim().toLowerCase();
+
     this.tagSuggestions = q
-      ? this.availableTags.filter(t => t.toLowerCase().startsWith(q) && !(this.newPost.tags || []).includes(t)).slice(0, 6)
+      ? this.availableTags
+        .filter(t => t.toLowerCase().startsWith(q) && !(this.newPost.tags || []).includes(t))
+        .slice(0, 6)
       : [];
   }
 
   addTagFromInput(event: Event) {
     const keyboardEvent = event as KeyboardEvent;
+
     if (keyboardEvent.key !== 'Enter') return;
+
     const raw = this.tagInput.trim();
     if (!raw) return;
+
     const match = this.availableTags.find(t => t.toLowerCase() === raw.toLowerCase());
+
     this.addTag(match ?? raw);
+
     keyboardEvent.preventDefault();
   }
 
   addTag(tag: string) {
     if (!tag) return;
+
     this.newPost.tags = this.newPost.tags || [];
+
     if (!this.newPost.tags.includes(tag)) {
       this.newPost.tags.push(tag);
     }
+
     this.tagInput = '';
     this.tagSuggestions = [];
   }
@@ -262,12 +296,15 @@ export class Forum implements OnDestroy {
 
   timeAgo(dateStr?: string): string {
     if (!dateStr) return '';
+
     const then = new Date(dateStr).getTime();
     const now = Date.now();
     const diff = Math.floor((now - then) / 1000);
+
     if (diff < 60) return `${diff}s`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+
     return `${Math.floor(diff / 86400)}d`;
   }
 }
