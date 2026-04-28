@@ -1,1 +1,23 @@
-<p>learn-with-ai works!</p>
+<app-shared-model></app-shared-model>
+
+<div class="chat-container">
+  <div class="chat-header">
+    <img src="assets/Logo.png" alt="CodelAI Logo" class="sidebar-logo" />
+    <p class="p">Chat AI</p>
+  </div>
+
+  <div class="chat-body">
+    <div class="message user" *ngIf="message">
+      {{ message }}
+    </div>
+
+    <div class="message bot">
+      {{ response }}
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input [(ngModel)]="message" placeholder="Napisz..." />
+    <button (click)="send()">Wyślij</button>
+  </div>
+</div>
