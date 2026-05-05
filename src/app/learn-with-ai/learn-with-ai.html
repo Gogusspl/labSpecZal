@@ -7,12 +7,12 @@
   </div>
 
   <div class="chat-body">
-    <div class="message user" *ngIf="message">
-      {{ message }}
-    </div>
-
-    <div class="message bot">
-      {{ response }}
+    <div
+      class="message"
+      *ngFor=" let msg of messages"
+      [ngClass]="msg.sender"
+    >
+      {{ msg.text }}
     </div>
   </div>
 
