@@ -1,1 +1,126 @@
-<p>road-map works!</p>
+<app-shared-model></app-shared-model>
+
+<main>
+  <section class="hero container">
+    <h1>Explore the World of Code</h1>
+    <p class="hero-sub">Select a domain to begin learning</p>
+
+    <div class="carousel-wrap">
+      <button
+        class="carousel-btn left"
+        (click)="prev()"
+        [disabled]="!canScrollLeft"
+        aria-label="Previous"
+      >
+        ‹
+      </button>
+
+      <div class="card-scroller" #scroller>
+        <div class="cards-track">
+          @for (c of cards; track c.id) {
+            <a
+              (click)="selectPath(c)"
+              class="card"
+              [ngClass]="[c.bg, selectedPath?.id === c.id ? 'selected-card' : '']"
+              role="button"
+              tabindex="0"
+              (keydown.enter)="selectPath(c)"
+              (keydown.space)="$event.preventDefault(); selectPath(c)"
+              aria-pressed="{{ selectedPath?.id === c.id }}"
+            >
+              @if (c.iconType === 'fa') {
+                <i class="{{ c.icon }} icon" aria-hidden="true"></i>
+              }
+              @if (c.iconType === 'mat') {
+                <span class="material-icons icon">{{ c.icon }}</span>
+              }
+              <span class="card-label">{{ c.title }}</span>
+            </a>
+          }
+        </div>
+      </div>
+
+      <button
+        class="carousel-btn right"
+        (click)="next()"
+        [disabled]="!canScrollRight"
+        aria-label="Next"
+      >
+        ›
+      </button>
+    </div>
+  </section>
+
+  @if (selectedPath) {
+    <section class="roadmap-wrap">
+      <div
+        style="display:flex;align-items:center;justify-content:space-between;gap:12px;"
+      >
+        <h2>{{ selectedPath.title }} Roadmap</h2>
+        <div style="color:#fff;font-weight:700;">&nbsp;</div>
+      </div>
+
+      <div class="timeline" style="margin-top:12px;">
+        <ul class="levels">
+          <li class="active"><span class="dot"></span> Beginner</li>
+          <li><span class="dot"></span> Beginner+</li>
+          <li><span class="dot"></span> Advanced</li>
+          <li><span class="dot"></span> Advanced+</li>
+        </ul>
+
+        <div class="diagram">
+          <div class="bigcard-col">
+            <div class="big-card selected-domain-card purple-card">
+              <span class="material-icons icon">dns</span>
+              <div class="selected-domain-title">{{ selectedPath.title }}</div>
+            </div>
+
+            @if (!selectedLang) {
+              <div class="languages-grid">
+                @for (lang of languagesList; track lang) {
+                  <button
+                    class="lang-btn"
+                    (click)="selectLang(lang)"
+                  >
+                    {{ lang }}
+                  </button>
+                }
+              </div>
+            }
+
+            @if (selectedLang) {
+              <div class="selected-stack-badge">
+                Selected: {{ selectedLang }}
+              </div>
+            }
+          </div>
+
+          @if (selectedLang) {
+            <div class="flow">
+              <div class="row">
+                @for (s of currentSteps; track s.id) {
+                  <div class="step">
+                    <div class="badge">{{ s.id }}</div>
+                    <div class="t">{{ s.title }}</div>
+                    @if (s.subtitle) {
+                      <div class="s">{{ s.subtitle }}</div>
+                    }
+                  </div>
+                }
+                @if (currentSteps.length === 0) {
+                  <div style="color:#ddd;padding:16px;">
+                    No roadmap data for selected language/stack.
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (selectedLang) {
+        <button class="cta">Start Learning This Path</button>
+      }
+    </section>
+  }
+</main>
